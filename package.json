@@ -18,6 +18,12 @@
       "title": "Active tasks details",
       "description": "",
       "mode": "menu-bar"
+    },
+    {
+      "name": "logs",
+      "title": "Logs from the day",
+      "description": "",
+      "mode": "view"
     }
   ],
   "preferences": [

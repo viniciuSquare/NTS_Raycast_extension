@@ -7,7 +7,11 @@ import {
   Icon 
 } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
-import { TasksDatabase } from "./notionAPI/TasksDatabase";
+import { TasksDatabase } from "./notionAPI/databases/TasksDatabase";
+import { Database } from "./notionAPI/base/Database";
+import { ListProps } from "./notionAPI/types";
+import { PageDetails } from "./components/PageDetails";
+import { Page } from "./notionAPI/base/Page";
 
 export default function Command() {
   const preferences = getPreferenceValues<any>();
@@ -19,25 +23,39 @@ export default function Command() {
     return pages;
   });
 
-  console.log(!isLoading ? new Date(tasksPages?.results[0].properties["Due to"].date.start) : "isLoading");
-
   return (
-    <List isLoading={isLoading}>
+    <TasksList 
+      isLoading={isLoading}  
+      databasePages={tasksPages?.results} token={preferences.personalAccessToken}
+    />
+  );
+}
+
+
+function TasksList(props: ListProps) {
+  return (
+    <List 
+      isLoading={props.isLoading}
+    >
       {
-        tasksPages?.results.map( (page: any) => {
+        props.databasePages?.map( (notionPage: any) => {
+          const page = new Page(notionPage);
+
           return (
             <List.Item
-              icon={ page.icon?.emoji ? page.icon.emoji : Icon.ChevronRightSmall}
-              title={page.properties.Name.title[0].plain_text}
-              key={page.id}
+              icon={ page.icon }
+              title={ page.title }
+              key={ page.id }
               actions={
                 <ActionPanel>
-                  <Action.Push title="Show Details" target={<Detail markdown="# Hey! 👋" />} />
+                  <Action.Open title="Open" target={page.url} />
+                  <Action.Open title="Open on Notion" target={page.urlToNotionOnNewTab} />
+                  <Action.Push title="Show Details" target={<PageDetails page={page} token={props.token}/> } />
                 </ActionPanel>
               }
               accessories={[ 
                 { text: page.properties.State.status.name },
-                { date: new Date(tasksPages?.results[0].properties["Due to"].date.start) } 
+                { date: new Date(Database.getDate(page, "Due to")) } 
               ]}
             />
             
@@ -46,5 +64,5 @@ export default function Command() {
         )
       }
     </List>
-  );
+  )
 }
