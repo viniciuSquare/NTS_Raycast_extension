@@ -8,6 +8,11 @@ export abstract class Database {
     private databasePages!: QueryDatabaseResponse;
     private queryFilter: QueryDatabaseParameters;
 
+    abstract databaseId: string;
+    protected dateProperty = "Date" ;
+
+    protected pageModel = Page;
+
     constructor( 
         private token: string
     ) {
@@ -23,10 +28,10 @@ export abstract class Database {
     /***
      * Get database pages
      * */ 
-    async getData( queryFilter = null ) {
+    async getData( queryFilter: QueryDatabaseParameters | null = null ) {
         this.databasePages = await this.notion.databases.query( queryFilter ? queryFilter: this.queryFilter )
 
-        return this.databasePages;
+        return this.pages;
     }
 
     get properties() {
@@ -34,13 +39,21 @@ export abstract class Database {
     }
 
     static getDate( databasePage: Page, datePropertyKey: string ) {
+        if(!datePropertyKey)
+            datePropertyKey = this.dateProperty;
+
         const taskDueTo = databasePage.properties[datePropertyKey];
         
         if( !taskDueTo ) {
             return
         }
 
-        console.log(taskDueTo.date.start);
         return taskDueTo.date.start;
+    }
+
+    get pages() {
+        return this.databasePages.results.map( 
+            notionPage => new this.pageModel(notionPage)
+        )
     }
 }

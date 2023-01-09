@@ -1,41 +1,59 @@
-import { getPreferenceValues, Icon, MenuBarExtra } from "@raycast/api";
+import { Action, getPreferenceValues, Icon, MenuBarExtra, open } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
+import { Page } from "./notionAPI/base/Page";
+import { DaysDatabase } from "./notionAPI/databases/DaysDatabase";
 import { TasksDatabase } from "./notionAPI/databases/TasksDatabase";
 
 export default function Command() {
   const preferences = getPreferenceValues<any>();
 
   const tasksDatabase = new TasksDatabase(preferences.personalAccessToken);
-  // tasksDatabase.setQueryFilter({
-  //     filter: {
-  //         property: "State",
-  //         equals: "Doing"
-  //     }
-  // })
+  const daysDatabase = new DaysDatabase(preferences.personalAccessToken);
+  let tasksPages :Page[] = [];
+  let daysPages  :Page[] = []; 
 
-  const { isLoading, data: tasksPages } = usePromise(async () => {
-    const pages = await tasksDatabase.getData().then();
-    return pages;
+  const { isLoading, data: pages } = usePromise(async () => {
+    const tasksPages = await tasksDatabase.getData(tasksDatabase.doingFilter);
+    const daysPages = await daysDatabase.getData();
+    return [tasksPages, daysPages];
   });
+  
+  function setPages() {
+    tasksPages = pages[0];
+    daysPages  = pages[1]; 
 
-  // console.log(!isLoading ? tasksPages?.results[0].icon.emoji : "isLoading");
+    console.log(daysPages)
+  }
+  
+  if(!isLoading) setPages();
 
   return (
-    <MenuBarExtra icon="https://github.githubassets.com/favicons/favicon.png">
-      {!isLoading ? (
-        tasksPages?.results.map((page: any) => {
-          return (
-            <MenuBarExtra.Item
-              icon={page.icon?.emoji ? page.icon.emoji : Icon.ChevronRightSmall}
-              title={page.properties.Name.title[0].plain_text}
-              key={page.id}
-              onAction={() => open(page.url)}
-            />
-          );
-        })
+    <MenuBarExtra icon={Icon.CircleProgress}>
+      {(!isLoading || tasksPages?.length) ? (
+        <>
+          <PagesList pages={daysPages} ></PagesList>
+          <MenuBarExtra.Section title="Tasks">
+            <PagesList pages={tasksPages} ></PagesList>
+          </MenuBarExtra.Section>
+        </>
       ) : (
         <MenuBarExtra.Item icon={Icon.ChevronRightSmall} title="Carregando" />
       )}
     </MenuBarExtra>
   );
+}
+
+function PagesList( props: { pages: Page[] } ) {
+  const { pages } = props;
+
+  return pages?.map((page: Page) => {
+    return (
+      <MenuBarExtra.Item
+        icon={page.icon}
+        title={page.title}
+        key={page.id}
+        onAction={() => open(page.urlToNotionOnNewTab)}
+      />
+    );
+  });
 }

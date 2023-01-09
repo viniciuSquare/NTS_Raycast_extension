@@ -3,54 +3,69 @@ import { DateTime } from "luxon";
 import { Database } from "../base/Database";
 
 export class TasksDatabase extends Database {
-  /***
-   * Filter to tasks between yesterday and today
-   */
-  private baseQueryFilter = {
-    database_id: "f1abd3b9a124474aa43c5a6478ce9057",
-    filter: {
-      and: [
-        {
-          property: "done",
-          checkbox: {
-            equals: false,
-          },
-        },
-        {
-          ...this.nowDaysFilter
-        },
-      ],
-    },
-    sorts: [{
-      property: "Due to",
-      direction: "descending"
-    }]
-  };
+  databaseId = "f1abd3b9a124474aa43c5a6478ce9057";
 
   constructor(connectionToken: string) {
     super(connectionToken);
-    this.setQueryFilter(this.baseQueryFilter);
+    this.setQueryFilter(this.nowDaysFilter);
   }
 
   /***
    * Filter between yesterday and today
-   * */ 
-  get nowDaysFilter () {
+   * */
+  get nowDaysFilter(): QueryDatabaseParameters {
     return {
-      and: [
+      database_id: this.databaseId,
+      filter: {
+        and: [
+          {
+            property: "done",
+            checkbox: {
+              equals: false,
+            },
+          },
+          {
+            and: [
+              {
+                property: "Due to",
+                date: {
+                  on_or_after: DateTime.now().minus({ days: 1 }).toISODate(),
+                },
+              },
+              {
+                property: "Due to",
+                date: {
+                  on_or_before: DateTime.now().toISODate(),
+                },
+              },
+            ],
+          },
+        ],
+      },
+      sorts: [
         {
           property: "Due to",
-          date: {
-            on_or_after: DateTime.now().minus({ days: 1 }).toISODate(),
-          },
-        },
-        {
-          property: "Due to",
-          date: {
-            on_or_before: DateTime.now().toISODate(),
-          },
+          direction: "descending",
         },
       ],
-    }
+    };
+  }
+
+  get doingFilter(): QueryDatabaseParameters {
+    return {
+      database_id: this.databaseId,
+      filter: {
+        property: "State",
+        status: {
+          equals: "Doing",
+        },
+      },
+      sorts: [
+        {
+          property: "Due to",
+          direction: "descending",
+        },
+      ],
+    };
   }
 }

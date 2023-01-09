@@ -6,7 +6,7 @@ export class Page {
     private notion: Client;
 
     constructor( 
-        private notionPage: PageObjectResponse
+        private notionPage: PageObjectResponse | PartialPageObjectResponse
     ) {}
 
     get id() {
@@ -14,7 +14,7 @@ export class Page {
     }
 
     get title() {
-        return this.notionPage.properties.Name.title[0].plain_text;
+        return this.notionPage.properties.Name?.title[0].plain_text ? this.notionPage.properties.Name?.title[0].plain_text : `+ Nameless > ${this.id}`;
     }
 
     get icon() {
@@ -40,7 +40,7 @@ export class Page {
     }
 
     get urlToNotionOnNewTab() {
-        return `notion:${this.notionPage.url}?deepLinkOpenNewTab=true`
+        return `notion:${this.notionPage.url.replace("https:","")}?deepLinkOpenNewTab=true`
     }
 
     get properties() {
