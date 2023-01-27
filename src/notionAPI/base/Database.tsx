@@ -1,59 +1,75 @@
-import { Client } from "@notionhq/client"
-import { PageObjectResponse, QueryDatabaseParameters, QueryDatabaseResponse } from "@notionhq/client/build/src/api-endpoints";
+import { Client } from "@notionhq/client";
+import {
+  DatabaseObjectResponse,
+  PageObjectResponse,
+  PartialPageObjectResponse,
+  QueryDatabaseParameters,
+  QueryDatabaseResponse,
+} from "@notionhq/client/build/src/api-endpoints";
+import { notion } from "../lib/notion";
 import { Page } from "./Page";
 
 export abstract class Database {
-    private notion;
+  private notion = notion;
 
-    private databasePages!: QueryDatabaseResponse;
-    private queryFilter: QueryDatabaseParameters;
+  abstract databaseId: string;
 
-    abstract databaseId: string;
-    protected dateProperty = "Date" ;
+  private databasePages!: DatabaseObjectResponse | QueryDatabaseResponse;
+  private queryFilter!: QueryDatabaseParameters;
 
-    protected pageModel = Page;
+  public pageModel: typeof Page = Page;
 
-    constructor( 
-        private token: string
-    ) {
-        this.notion = new Client({
-            auth: this.token,
-        })       
-    }
+  setQueryFilter(queryFilter: QueryDatabaseParameters) {
+    this.queryFilter = queryFilter;
+  }
 
-    setQueryFilter( queryFilter: QueryDatabaseParameters ) {
-        this.queryFilter = queryFilter;
-    }
+  setPageModel(pageModel: typeof Page) {
+    this.pageModel = pageModel;
+  }
 
-    /***
-     * Get database pages
-     * */ 
-    async getData( queryFilter: QueryDatabaseParameters | null = null ) {
-        this.databasePages = await this.notion.databases.query( queryFilter ? queryFilter: this.queryFilter )
+  /***
+   * Get database pages
+   * */
+  async getData(queryFilter: QueryDatabaseParameters | null = null) {
+    this.databasePages = (await this.notion.databases.query(
+      queryFilter ? queryFilter : this.queryFilter
+    )) as unknown as DatabaseObjectResponse | QueryDatabaseResponse;
+    
+    return this.pages;
+  }
 
-        return this.pages;
-    }
+  get properties() {
+    return this.databasePages?.properties;
+  }
 
-    get properties() {
-        return this.databasePages.properties;
-    }
+  get pages(): Page[] {
+    return this.databasePages.results
+      .map((notionPage: PageObjectResponse | PartialPageObjectResponse) => new this.pageModel(notionPage));
+  }
 
-    static getDate( databasePage: Page, datePropertyKey: string ) {
-        if(!datePropertyKey)
-            datePropertyKey = this.dateProperty;
+  get templates() {
+    return this.notion
+      .pages.retrieve({
+        page_id: this.databaseId,
+        filter_properties: [`template = true`]
+      }).then( res => {
+        console.log(res)
+      } )
+      // ({
+      //   filter: {
+      //     property: "object",
+      //     value: "page",
+      //   },
+      //   query: "template = true",
 
-        const taskDueTo = databasePage.properties[datePropertyKey];
-        
-        if( !taskDueTo ) {
-            return
-        }
+      // },
 
-        return taskDueTo.date.start;
-    }
-
-    get pages() {
-        return this.databasePages.results.map( 
-            notionPage => new this.pageModel(notionPage)
-        )
-    }
+      // )
+      // .then((results) => {
+      //   console.log("Templates: ", results);
+      // })
+      // .catch((error) => {
+      //   console.log("Error searching templates: ", error);
+      // });
+  }
 }

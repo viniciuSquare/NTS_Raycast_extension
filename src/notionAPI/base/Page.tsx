@@ -1,51 +1,84 @@
-import { Client } from "@notionhq/client";
-import { PageObjectResponse, PartialPageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import {
+  PageObjectResponse,
+  PartialPageObjectResponse,
+  RichTextItemResponse,
+} from "@notionhq/client/build/src/api-endpoints";
 import { Icon } from "@raycast/api";
 
 export class Page {
-    private notion: Client;
+  // private notion: Client;
 
-    constructor( 
-        private notionPage: PageObjectResponse | PartialPageObjectResponse
-    ) {}
+  public dateProperty = "Date";
 
-    get id() {
-        return this.notionPage.id;
+  constructor(private notionPage: PageObjectResponse | PartialPageObjectResponse) {
+    console.log();
+  }
+
+  get id() {
+    return this.notionPage.id;
+  }
+
+  get title() {
+    return this.titleObjectProperty.title.map(({ plain_text }) => plain_text).join("");
+  }
+  get titleObjectProperty(): {
+    type: "title";
+    title: Array<RichTextItemResponse>;
+  } {
+    return this.properties[this.getKeyToTitleProperty];
+  }
+
+  get getKeyToTitleProperty(): string {
+    return Object.keys(this.properties).filter((key) => this.properties[key].type == "title")[0];
+  }
+
+  get icon() {
+    if (this.notionPage.icon) {
+      switch (this.notionPage.icon.type) {
+        case "external":
+          return this.notionPage.icon[this.notionPage.icon.type].url;
+        case "emoji":
+          return this.notionPage.icon.emoji;
+      }
+    }
+    return Icon.ChevronRightSmall;
+  }
+
+  public getDate(databasePage: Page, datePropertyKey: string | null = null) {
+    if (!datePropertyKey) datePropertyKey = this.dateProperty;
+
+    const taskDueTo = databasePage.properties[datePropertyKey];
+
+    if (!taskDueTo) {
+      return;
     }
 
-    get title() {
-        return this.notionPage.properties.Name?.title[0].plain_text ? this.notionPage.properties.Name?.title[0].plain_text : `+ Nameless > ${this.id}`;
-    }
+    return taskDueTo.date.start;
+  }
 
-    get icon() {
-        return this.notionPage.icon?.emoji ? this.notionPage.icon.emoji : Icon.ChevronRightSmall
-    }
+  // async getContent(token: string) {
+  //   this.notion = new Client({
+  //     auth: token,
+  //   });
 
-    async getContent(token: string) {
-        this.notion = new Client({
-            auth: token
-        });
+  //   const blocks = await this.notion.blocks.children.list({
+  //     block_id: this.notionPage.id,
+  //   });
 
-        const blocks =  await this.notion.blocks.children.list({
-            block_id: this.notionPage.id
-        })
+  //   console.log(blocks);
 
-        console.log(blocks);
+  //   return blocks;
+  // }
 
-        return blocks;
-    }
+  get url() {
+    return this.notionPage.url;
+  }
 
-    get url() {
-        return this.notionPage.url
-    }
+  get urlToNotionOnNewTab() {
+    return `notion:${this.url.replace("https:", "")}?deepLinkOpenNewTab=true`;
+  }
 
-    get urlToNotionOnNewTab() {
-        return `notion:${this.notionPage.url.replace("https:","")}?deepLinkOpenNewTab=true`
-    }
-
-    get properties() {
-        return this.notionPage.properties;
-    }
-
-
+  get properties() {
+    return this.notionPage.properties;
+  }
 }
