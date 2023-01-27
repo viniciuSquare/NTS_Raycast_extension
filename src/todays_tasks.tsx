@@ -35,8 +35,8 @@ function TasksList(props: ListProps) {
               </ActionPanel>
             }
             accessories={[
-              { text: page.properties.State.status.name },
-              { date: new Date(Database.getDate(page, "Due to")) },
+              { text: page.properties.Status.status.name },
+              { date: new Date(page.getDate(page)) },
             ]}
           />
         );
